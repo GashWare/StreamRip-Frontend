@@ -1,243 +1,270 @@
-import React, { useState, useEffect, useRef } from 'react';
-
-// ==========================================
-// CONFIGURATION
-// ==========================================
-// 1. BACKEND: Replace with your actual Render URL
-// e.g., const BACKEND_URL = "https://streamrip-backend.onrender.com";
-const BACKEND_URL = "http://localhost:5000"; 
-
-// 2. ADSENSE: Your Google AdSense details
-const ADSENSE_CLIENT_ID = "ca-pub-7151608977843663"; 
-const ADSENSE_SLOT_TOP = "2999856327";
-const ADSENSE_SLOT_BOTTOM = "2549441943";
-
-// --- ICONS (Inline SVG) ---
-const Icons = {
-    Youtube: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>,
-    Music: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>,
-    FileAudio: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 22h.5c.5 0 1-.2 1.4-.6.4-.4.6-.9.6-1.4V7.5L14.5 2H6c-.5 0-1 .2-1.4.6C4.2 3 4 3.5 4 4v3"/><polyline points="14 2 14 8 20 8"/><path d="M10 20v-1a2 2 0 1 1 4 0v1a2 2 0 1 1-4 0Z"/><path d="M6 20v-1a2 2 0 1 0-4 0v1a2 2 0 1 0 4 0Z"/><path d="M2 19v-3a6 6 0 0 1 12 0v3"/></svg>,
-    Download: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>,
-    Terminal: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>,
-    Check: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
-    Alert: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-};
-
-// --- ADSENSE COMPONENT ---
-const AdBanner = ({ client, slot, label }) => {
-    // 1. Inject AdSense Script dynamically
-    useEffect(() => {
-        if (!document.querySelector('script[src*="adsbygoogle.js"]')) {
-            const script = document.createElement('script');
-            script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`;
-            script.async = true;
-            script.crossOrigin = "anonymous";
-            document.body.appendChild(script);
-        }
-    }, [client]);
-
-    // 2. Initialize Ad Slot
-    useEffect(() => {
-        if (client && slot && client !== "YOUR_ID_HERE") {
-            try {
-                (window.adsbygoogle = window.adsbygoogle || []).push({});
-            } catch (err) {
-                // Ignore error if ad is already loaded
-            }
-        }
-    }, [client, slot]);
-
-    return (
-        <div className="w-full my-6 flex flex-col items-center justify-center min-h-[100px]">
-            <span className="mb-2 uppercase tracking-widest text-[10px] font-bold text-slate-600">Advertisement</span>
-            <ins className="adsbygoogle"
-                 style={{ display: 'block', width: '100%' }}
-                 data-ad-client={client}
-                 data-ad-slot={slot}
-                 data-ad-format="auto"
-                 data-full-width-responsive="true">
-            </ins>
-        </div>
-    );
-};
-
-export default function App() {
-    const [url, setUrl] = useState('');
-    const [format, setFormat] = useState('mp3');
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [progress, setProgress] = useState(0);
-    const [status, setStatus] = useState('Ready');
-    const [logs, setLogs] = useState([]);
-    const [showLogs, setShowLogs] = useState(false);
-    const [downloadReady, setDownloadReady] = useState(false);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamRip | Professional Audio Converter</title>
     
-    const logEndRef = useRef(null);
+    <!-- React & Tailwind -->
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.min.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 
-    useEffect(() => {
-        if (logEndRef.current) logEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }, [logs, showLogs]);
+    <style>
+        body { background-color: #020617; color: #e2e8f0; font-family: sans-serif; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .animate-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
 
-    const addLog = (msg, type = 'info') => {
-        const time = new Date().toLocaleTimeString();
-        setLogs(prev => [...prev, { time, msg, type }]);
-    };
+    <script type="text/babel">
+        // ==========================================
+        // CONFIGURATION
+        // ==========================================
+        // 1. BACKEND: Connected to your live Render server
+        const BACKEND_URL = "https://streamrip-backend.onrender.com"; 
 
-    const handleStart = async () => {
-        if (!url.trim()) {
-            alert("Please enter a valid YouTube URL");
-            return;
-        }
+        // 2. ADSENSE: Configured
+        const ADSENSE_CLIENT_ID = "ca-pub-7151608977843663"; 
+        const ADSENSE_SLOT_TOP = "2999856327";
+        const ADSENSE_SLOT_BOTTOM = "2549441943";
 
-        setIsProcessing(true);
-        setProgress(0);
-        setLogs([]);
-        setDownloadReady(false);
-        setStatus('Initializing...');
-        addLog(`Target: ${url}`);
-        addLog(`Format: ${format.toUpperCase()}`);
+        const { useState, useEffect, useRef } = React;
 
-        try {
-            // 1. Send Request to Backend
-            addLog('Connecting to server...', 'debug');
-            
-            const response = await fetch(`${BACKEND_URL}/convert`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url, format })
-            });
+        // --- ICONS ---
+        const Icons = {
+            Youtube: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>,
+            Music: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>,
+            FileAudio: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 22h.5c.5 0 1-.2 1.4-.6.4-.4.6-.9.6-1.4V7.5L14.5 2H6c-.5 0-1 .2-1.4.6C4.2 3 4 3.5 4 4v3"/><polyline points="14 2 14 8 20 8"/><path d="M10 20v-1a2 2 0 1 1 4 0v1a2 2 0 1 1-4 0Z"/><path d="M6 20v-1a2 2 0 1 0-4 0v1a2 2 0 1 0 4 0Z"/><path d="M2 19v-3a6 6 0 0 1 12 0v3"/></svg>,
+            Download: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>,
+            Terminal: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>,
+            Check: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+            Alert: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+        };
 
-            if (!response.ok) {
-                let errorMessage = 'Conversion failed';
-                try {
-                    const errData = await response.json();
-                    if (errData.error) errorMessage = errData.error;
-                } catch (e) {}
-                throw new Error(errorMessage);
+        // --- ADSENSE COMPONENT ---
+        const AdBanner = ({ client, slot, label }) => {
+            useEffect(() => {
+                if (!document.querySelector('script[src*="adsbygoogle.js"]')) {
+                    const script = document.createElement('script');
+                    script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`;
+                    script.async = true;
+                    script.crossOrigin = "anonymous";
+                    document.body.appendChild(script);
+                }
+            }, [client]);
+
+            useEffect(() => {
+                if (client && slot && client !== "YOUR_ADSENSE_ID_HERE") {
+                    try {
+                        (window.adsbygoogle = window.adsbygoogle || []).push({});
+                    } catch (err) {
+                        console.error("AdSense Push Error:", err);
+                    }
+                }
+            }, [client, slot]);
+
+            if (!client || client === "YOUR_ADSENSE_ID_HERE") {
+                return (
+                    <div className="w-full my-6 p-4 bg-slate-800 border border-slate-700 rounded-lg flex flex-col items-center justify-center text-slate-500 text-sm min-h-[100px]">
+                        <span className="mb-2 uppercase tracking-widest text-[10px] font-bold text-slate-600">Advertisement</span>
+                        <div className="w-full h-20 bg-slate-900/50 rounded border border-dashed border-slate-600 flex items-center justify-center text-xs">
+                            AdSpace ({label})
+                        </div>
+                    </div>
+                );
             }
 
-            setStatus('Processing & Converting...');
-            setProgress(50);
-            addLog('Server is processing the video...', 'debug');
-
-            const blob = await response.blob();
-            const downloadUrl = window.URL.createObjectURL(blob);
-            
-            const link = document.createElement('a');
-            link.href = downloadUrl;
-            link.download = `audio.${format}`;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            
-            setProgress(100);
-            setStatus('Complete!');
-            setDownloadReady(true);
-            addLog('File downloaded successfully', 'success');
-            setShowLogs(true);
-
-        } catch (err) {
-            setStatus('Error');
-            addLog(err.message, 'error');
-            console.error(err);
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-    return (
-        <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30 p-4 md:p-8 flex flex-col items-center">
-            {/* STYLES */}
-            <style>{`
-                ::-webkit-scrollbar { width: 8px; }
-                ::-webkit-scrollbar-track { background: #0f172a; }
-                ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-                ::-webkit-scrollbar-thumb:hover { background: #475569; }
-                .animate-in { animation: fadeIn 0.5s ease-out forwards; }
-                @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-            `}</style>
-
-            {/* HEADER */}
-            <header className="w-full max-w-3xl flex items-center justify-between mb-8 pb-6 border-b border-slate-800">
-                <div className="flex items-center gap-4">
-                    <div className="p-3 bg-blue-600 rounded-xl shadow-lg shadow-blue-900/40 text-white">
-                        <Icons.Youtube />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-300">StreamRip</h1>
-                        <p className="text-slate-500 text-sm font-medium">Professional Converter</p>
-                    </div>
+            return (
+                <div className="w-full my-6 flex flex-col items-center justify-center min-h-[100px]">
+                    <span className="mb-2 uppercase tracking-widest text-[10px] font-bold text-slate-600">Advertisement</span>
+                    <ins className="adsbygoogle"
+                        style={{ display: 'block', width: '100%' }}
+                        data-ad-client={client}
+                        data-ad-slot={slot}
+                        data-ad-format="auto"
+                        data-full-width-responsive="true">
+                    </ins>
                 </div>
-            </header>
+            );
+        };
 
-            {/* TOP AD */}
-            <div className="w-full max-w-3xl">
-                <AdBanner client={ADSENSE_CLIENT_ID} slot={ADSENSE_SLOT_TOP} label="Top Banner" />
-            </div>
+        // --- MAIN APP ---
+        function App() {
+            const [url, setUrl] = useState('');
+            const [format, setFormat] = useState('mp3');
+            const [isProcessing, setIsProcessing] = useState(false);
+            const [progress, setProgress] = useState(0);
+            const [status, setStatus] = useState('Ready');
+            const [logs, setLogs] = useState([]);
+            const [showLogs, setShowLogs] = useState(false);
+            const [downloadReady, setDownloadReady] = useState(false);
+            
+            const logEndRef = useRef(null);
 
-            {/* MAIN CARD */}
-            <div className="w-full max-w-3xl bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
-                <div className="p-6 md:p-8 space-y-8">
-                    <div className="space-y-3">
-                        <label className="text-sm font-semibold text-slate-400 ml-1">YouTube Video URL</label>
-                        <div className="relative group">
-                            <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-4 py-4 pl-12 focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-700 font-medium" />
-                            <div className="absolute left-4 top-4 text-slate-600 group-focus-within:text-blue-500 transition-colors"><Icons.Youtube /></div>
+            useEffect(() => {
+                if (logEndRef.current) logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+            }, [logs, showLogs]);
+
+            const addLog = (msg, type = 'info') => {
+                const time = new Date().toLocaleTimeString();
+                setLogs(prev => [...prev, { time, msg, type }]);
+            };
+
+            const handleStart = async () => {
+                if (!url.trim()) {
+                    alert("Please enter a valid YouTube URL");
+                    return;
+                }
+
+                setIsProcessing(true);
+                setProgress(0);
+                setLogs([]);
+                setDownloadReady(false);
+                setStatus('Initializing...');
+                addLog(`Target: ${url}`);
+                addLog(`Format: ${format.toUpperCase()}`);
+
+                try {
+                    addLog('Connecting to server...', 'debug');
+                    
+                    const response = await fetch(`${BACKEND_URL}/convert`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url, format })
+                    });
+
+                    if (!response.ok) {
+                        let errorMessage = 'Conversion failed';
+                        try {
+                            const errData = await response.json();
+                            if (errData.error) errorMessage = errData.error;
+                        } catch (e) {}
+                        throw new Error(errorMessage);
+                    }
+
+                    setStatus('Processing & Converting...');
+                    setProgress(50);
+                    addLog('Server is processing the video...', 'debug');
+
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.download = `audio.${format}`;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    
+                    setProgress(100);
+                    setStatus('Complete!');
+                    setDownloadReady(true);
+                    addLog('File downloaded successfully', 'success');
+                    setShowLogs(true);
+
+                } catch (err) {
+                    setStatus('Error');
+                    addLog(err.message, 'error');
+                    console.error(err);
+                } finally {
+                    setIsProcessing(false);
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30 p-4 md:p-8 flex flex-col items-center">
+                    <header className="w-full max-w-3xl flex items-center justify-between mb-8 pb-6 border-b border-slate-800">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-blue-600 rounded-xl shadow-lg shadow-blue-900/40 text-white">
+                                <Icons.Youtube />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-300">StreamRip</h1>
+                                <p className="text-slate-500 text-sm font-medium">Professional Converter</p>
+                            </div>
                         </div>
+                    </header>
+
+                    <div className="w-full max-w-3xl">
+                        <AdBanner client={ADSENSE_CLIENT_ID} slot={ADSENSE_SLOT_TOP} label="Top Banner" />
                     </div>
 
-                    <div className="space-y-3">
-                        <label className="text-sm font-semibold text-slate-400 ml-1">Output Format</label>
-                        <div className="grid grid-cols-2 gap-4">
-                            <button onClick={() => setFormat('mp3')} className={`flex items-center justify-center gap-3 p-4 rounded-xl border transition-all duration-200 group ${format === 'mp3' ? 'bg-blue-600/10 border-blue-600/50 text-blue-400' : 'bg-slate-950 border-slate-800 text-slate-500 hover:bg-slate-800'}`}>
-                                <div className={format === 'mp3' ? 'text-blue-400' : 'text-slate-600 group-hover:text-slate-400'}><Icons.Music /></div>
-                                <span className="font-semibold">MP3</span>
-                            </button>
-                            <button onClick={() => setFormat('wav')} className={`flex items-center justify-center gap-3 p-4 rounded-xl border transition-all duration-200 group ${format === 'wav' ? 'bg-cyan-600/10 border-cyan-600/50 text-cyan-400' : 'bg-slate-950 border-slate-800 text-slate-500 hover:bg-slate-800'}`}>
-                                <div className={format === 'wav' ? 'text-cyan-400' : 'text-slate-600 group-hover:text-slate-400'}><Icons.FileAudio /></div>
-                                <span className="font-semibold">WAV</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <button onClick={handleStart} disabled={isProcessing} className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all transform active:scale-[0.99] ${isProcessing ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white'}`}>
-                        {isProcessing ? 'Processing...' : 'Start Conversion'}
-                    </button>
-                </div>
-
-                <div className={`bg-slate-950 border-t border-slate-800 p-6 md:p-8 transition-all duration-500 ${isProcessing || downloadReady || showLogs ? 'block' : 'hidden'}`}>
-                    <div className="flex justify-between items-center mb-3">
-                        <span className={`text-sm font-medium ${isProcessing ? 'text-blue-400 animate-pulse' : 'text-slate-400'}`}>{status}</span>
-                        <span className="text-sm font-mono text-slate-500">{Math.round(progress)}%</span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800 mb-6">
-                        <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-300 ease-out" style={{ width: `${progress}%` }} />
-                    </div>
-
-                    <div className="border-t border-slate-900 pt-4 flex items-center justify-between">
-                        <span className="text-[10px] text-slate-600 uppercase tracking-widest font-bold">System Output</span>
-                        <button onClick={() => setShowLogs(!showLogs)} className="flex items-center gap-2 text-xs text-blue-500 hover:text-blue-400 transition-colors">
-                            <Icons.Terminal /> {showLogs ? 'Hide Logs' : 'Show Logs'}
-                        </button>
-                    </div>
-
-                    {showLogs && (
-                        <div className="mt-3 bg-black rounded-lg border border-slate-800 p-4 font-mono text-xs h-48 overflow-y-auto shadow-inner">
-                            {logs.map((log, i) => (
-                                <div key={i} className="mb-1 leading-relaxed">
-                                    <span className="text-slate-600 mr-2">[{log.time}]</span>
-                                    <span className={log.type === 'error' ? 'text-red-400' : log.type === 'success' ? 'text-green-400' : 'text-slate-300'}>{log.msg}</span>
+                    <div className="w-full max-w-3xl bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+                        <div className="p-6 md:p-8 space-y-8">
+                            <div className="space-y-3">
+                                <label className="text-sm font-semibold text-slate-400 ml-1">YouTube Video URL</label>
+                                <div className="relative group">
+                                    <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-4 py-4 pl-12 focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-700 font-medium" />
+                                    <div className="absolute left-4 top-4 text-slate-600 group-focus-within:text-blue-500 transition-colors"><Icons.Youtube /></div>
                                 </div>
-                            ))}
-                            <div ref={logEndRef} />
-                        </div>
-                    )}
-                </div>
-            </div>
+                            </div>
 
-            {/* BOTTOM AD */}
-            <div className="w-full max-w-3xl">
-                <AdBanner client={ADSENSE_CLIENT_ID} slot={ADSENSE_SLOT_BOTTOM} label="Bottom Banner" />
-            </div>
-        </div>
-    );
-}
+                            <div className="space-y-3">
+                                <label className="text-sm font-semibold text-slate-400 ml-1">Output Format</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button onClick={() => setFormat('mp3')} className={`flex items-center justify-center gap-3 p-4 rounded-xl border transition-all duration-200 group ${format === 'mp3' ? 'bg-blue-600/10 border-blue-600/50 text-blue-400' : 'bg-slate-950 border-slate-800 text-slate-500 hover:bg-slate-800'}`}>
+                                        <div className={format === 'mp3' ? 'text-blue-400' : 'text-slate-600 group-hover:text-slate-400'}><Icons.Music /></div>
+                                        <span className="font-semibold">MP3</span>
+                                    </button>
+                                    <button onClick={() => setFormat('wav')} className={`flex items-center justify-center gap-3 p-4 rounded-xl border transition-all duration-200 group ${format === 'wav' ? 'bg-cyan-600/10 border-cyan-600/50 text-cyan-400' : 'bg-slate-950 border-slate-800 text-slate-500 hover:bg-slate-800'}`}>
+                                        <div className={format === 'wav' ? 'text-cyan-400' : 'text-slate-600 group-hover:text-slate-400'}><Icons.FileAudio /></div>
+                                        <span className="font-semibold">WAV</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button onClick={handleStart} disabled={isProcessing} className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all transform active:scale-[0.99] ${isProcessing ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white'}`}>
+                                {isProcessing ? 'Processing...' : 'Start Conversion'}
+                            </button>
+                        </div>
+
+                        <div className={`bg-slate-950 border-t border-slate-800 p-6 md:p-8 transition-all duration-500 ${isProcessing || downloadReady || showLogs ? 'block' : 'hidden'}`}>
+                            <div className="flex justify-between items-center mb-3">
+                                <span className={`text-sm font-medium ${isProcessing ? 'text-blue-400 animate-pulse' : 'text-slate-400'}`}>{status}</span>
+                                <span className="text-sm font-mono text-slate-500">{Math.round(progress)}%</span>
+                            </div>
+                            <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800 mb-6">
+                                <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-300 ease-out" style={{ width: `${progress}%` }} />
+                            </div>
+
+                            <div className="border-t border-slate-900 pt-4 flex items-center justify-between">
+                                <span className="text-[10px] text-slate-600 uppercase tracking-widest font-bold">System Output</span>
+                                <button onClick={() => setShowLogs(!showLogs)} className="flex items-center gap-2 text-xs text-blue-500 hover:text-blue-400 transition-colors">
+                                    <Icons.Terminal /> {showLogs ? 'Hide Logs' : 'Show Logs'}
+                                </button>
+                            </div>
+
+                            {showLogs && (
+                                <div className="mt-3 bg-black rounded-lg border border-slate-800 p-4 font-mono text-xs h-48 overflow-y-auto shadow-inner">
+                                    {logs.map((log, i) => (
+                                        <div key={i} className="mb-1 leading-relaxed">
+                                            <span className="text-slate-600 mr-2">[{log.time}]</span>
+                                            <span className={log.type === 'error' ? 'text-red-400' : log.type === 'success' ? 'text-green-400' : 'text-slate-300'}>{log.msg}</span>
+                                        </div>
+                                    ))}
+                                    <div ref={logEndRef} />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    
+                    <div className="w-full max-w-3xl">
+                        <AdBanner client={ADSENSE_CLIENT_ID} slot={ADSENSE_SLOT_BOTTOM} label="Bottom Banner" />
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
